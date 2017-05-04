@@ -83,6 +83,9 @@ public final class Distance {
         let countToShow = limit
         
         let bestd = UnsafeMutablePointer<Float>.allocate(capacity: countToShow)
+        defer {
+            bestd.deallocate(capacity: countToShow)
+        }
         
         for a in 0..<countToShow {
             bestd[a] = 0
@@ -92,13 +95,20 @@ public final class Distance {
         let bestw: [UnsafeMutablePointer<CChar>] = (0..<countToShow).map { _ in
             UnsafeMutablePointer<CChar>.allocate(capacity: MAX_STRING_LEN)
         }
+        defer {
+            bestw.forEach {
+                $0.deallocate(capacity: MAX_STRING_LEN)
+            }
+        }
         
         for a in 0..<countToShow {
             bestw[a][0] = 0
         }
         
         let st1 = UnsafeMutablePointer<CChar>.allocate(capacity: MAX_STRING_LEN)
-        
+        defer {
+            st1.deallocate(capacity: MAX_STRING_LEN)
+        }
         var a = 0
         words.withCString { (buf) -> Void in
             while true {
@@ -112,6 +122,11 @@ public final class Distance {
         }
         let st: [UnsafeMutablePointer<CChar>] = (0..<100).map { _ in
             UnsafeMutablePointer<CChar>.allocate(capacity: MAX_STRING_LEN)
+        }
+        defer {
+            st.forEach {
+                $0.deallocate(capacity: MAX_STRING_LEN)
+            }
         }
         //if (!strcmp(st1, "EXIT")) break;
         var cn = 0
