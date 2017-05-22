@@ -84,79 +84,16 @@ public final class Distance {
         M.deallocate(capacity: MCount)
     }
     
-    func calcDistance(words: String, limit: Int) {
+    func calcDistance(words: [String], limit: Int) {
         let countToShow = limit
         
-        let bestd = UnsafeMutablePointer<Float>.allocate(capacity: countToShow)
-        defer {
-            bestd.deallocate(capacity: countToShow)
-        }
-        
-        for a in 0..<countToShow {
-            bestd[a] = 0
-        }
-        
-        //for (a = 0; a < N; a++) bestw[a] = (char *)malloc(max_size * sizeof(char));
-        let bestw: [UnsafeMutablePointer<CChar>] = (0..<countToShow).map { _ in
-            UnsafeMutablePointer<CChar>.allocate(capacity: MAX_STRING_LEN)
-        }
-        defer {
-            bestw.forEach {
-                $0.deallocate(capacity: MAX_STRING_LEN)
-            }
-        }
-        
-        for a in 0..<countToShow {
-            bestw[a][0] = 0
-        }
-        
-        let st1 = UnsafeMutablePointer<CChar>.allocate(capacity: MAX_STRING_LEN)
-        defer {
-            st1.deallocate(capacity: MAX_STRING_LEN)
-        }
-        var a = 0
-        words.withCString { (buf) -> Void in
-            while true {
-                st1[a] = buf[a]
-                if ((st1[a] == CONST_NEWLINE) || (a >= MAX_STRING_LEN - 1)) {
-                    st1[a] = 0
-                    break
-                }
-                a += 1
-            }
-        }
-        let st: [UnsafeMutablePointer<CChar>] = (0..<100).map { _ in
-            UnsafeMutablePointer<CChar>.allocate(capacity: MAX_STRING_LEN)
-        }
-        defer {
-            st.forEach {
-                $0.deallocate(capacity: MAX_STRING_LEN)
-            }
-        }
-        //if (!strcmp(st1, "EXIT")) break;
-        var cn = 0
         var b = 0
-        var c = 0
-        while true {
-            st[cn][b] = st1[c]
-            b += 1
-            c += 1
-            st[cn][b] = 0
-            if (st1[c] == 0) {
-                break
-            }
-            if (st1[c] == CONST_SPACE) {
-                cn += 1
-                b = 0
-                c += 1
-            }
-        }
-        cn += 1
-        var bi = [Int](repeating: 0, count: 100)
+        let cn = words.count
+        var bi = [Int](repeating: 0, count: 100) // bi is vocab index for each words
         for a in 0..<cn {
             for bb in 0..<modelWords {
                 b = bb
-                if vocab[bb] == String(utf8String: st[a])! {
+                if vocab[bb] == words[a] {
                     break
                 }                
             }
@@ -164,7 +101,7 @@ public final class Distance {
                 b = -1
             }
             bi[a] = b
-            let str = String(format: "Word: %s  Position in vocabulary: %lld", st[a], bi[a])
+            let str = String(format: "Word: %@  Position in vocabulary: %lld", words[a], bi[a])
             print(str)
             if b == -1 {
                 print("Out of dictionary word!")
@@ -177,9 +114,6 @@ public final class Distance {
         }
         print("\n                                              Word       Cosine distance\n------------------------------------------------------------------------")
         var vec = [Float].init(repeating: 0, count: MAX_STRING_LEN)
-        for a in 0..<modelSize {
-            vec[a] = 0
-        }
         for b in 0..<cn {
             if bi[b] == -1 {
                 continue
@@ -196,12 +130,15 @@ public final class Distance {
         for a in 0..<modelSize {
             vec[a] /= len
         }
-        for a in 0..<countToShow {
+        /*for a in 0..<countToShow {
             bestd[a] = -1
-            bestw[a][0] = 0
-        }
+        }*/
+        
+        var bestd = [Float].init(repeating: -1, count: countToShow)
+        var bestw = [String](repeating: "", count: countToShow)
+        
         for c in 0..<modelWords {
-            a = 0
+            var a = 0
             for b in 0..<cn {
                 if bi[b] == c {
                     a = 1
@@ -222,18 +159,17 @@ public final class Distance {
                             break
                         }
                         bestd[d] = bestd[d - 1]
-                        strcpy(bestw[d], bestw[d - 1])
+                        bestw[d] = bestw[d - 1]
                         d -= 1
                     }
                     bestd[a] = dist
-                    let cstr = vocab[c].cString(using: .utf8)!
-                    strcpy(bestw[a], cstr);
+                    bestw[a] = vocab[c]
                     break;
                 }
             }
         }
         for a in 0..<countToShow {
-            let str = String(format: "%50s\t\t%f", bestw[a], bestd[a])
+            let str = String(format: "%@\t\t%f", bestw[a], bestd[a])
             print(str)
         }
     }

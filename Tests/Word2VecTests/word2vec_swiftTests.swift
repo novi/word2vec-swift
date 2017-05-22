@@ -12,7 +12,7 @@ class word2vec_swiftTests: XCTestCase {
         
         let distance = Distance(modelPath: "/Users/ito/ExtProjs/Word2Vec-iOS/Word2Vec-iOS/res/out.bin")
         
-        distance.calcDistance(words: "cat dog", limit: 120)
+        distance.calcDistance(words: ["cat", "dog"], limit: 120)
     }
 
 
