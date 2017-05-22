@@ -17,9 +17,8 @@ fileprivate let CONST_NEWLINE = CChar("\n".utf8CString[0])
 
 public final class Distance {
     
-    private let vocab: UnsafeMutablePointer<CChar>
-    private let vocabCount: Int
-    private let M: UnsafeMutablePointer<Float>
+    private let vocab: [String] // count will be `modelWords`
+    private let M: UnsafeMutablePointer<Float> // the model
     private let MCount: Int
     private let modelWords: Int
     private let modelSize: Int
@@ -27,30 +26,44 @@ public final class Distance {
         var modelWords_: Int64 = 0
         var modelSize_: Int64 = 0
         
-        let file = fopen(modelPath, "rb")
+        let file = fopen(modelPath, "rb") // load a model binary
+        defer {
+            fclose(file)
+        }
         fscanf_long(file, &modelWords_)
         fscanf_long(file, &modelSize_)
         modelWords = Int(modelWords_)
         modelSize = Int(modelSize_)
         
-        let vocabCount = modelWords * MAX_VOCAB_LEN
-        let vocab = UnsafeMutablePointer<CChar>.allocate(capacity: vocabCount)
-        let MCount = modelWords * modelSize
-        let M = UnsafeMutablePointer<Float>.allocate(capacity: MCount)
+        //let vocabCount = modelWords * MAX_VOCAB_LEN
+        // row=word length=MAX_VOCAB_LEN
+        // column length=modelWords
+        //let vocab = UnsafeMutablePointer<CChar>.allocate(capacity: vocabCount)
+        var vocab = [] as [String]
+        
+        MCount = modelWords * modelSize
+        M = UnsafeMutablePointer<Float>.allocate(capacity: MCount)
         do {
-            
-            for b in 0..<modelWords {
-                var a = 0
+            let vocabBuf = UnsafeMutablePointer<CChar>.allocate(capacity: MAX_VOCAB_LEN)
+            defer {
+                vocabBuf.deallocate(capacity: MAX_VOCAB_LEN)
+            }
+            for b in 0..<modelWords { // b is column
+                
+                // parse string from the binary
+                var i = 0
                 while true {
-                    vocab[b * MAX_VOCAB_LEN + a] = CChar(fgetc(file))
-                    if feof(file) > 0 || (vocab[b * MAX_VOCAB_LEN + a] == CONST_SPACE) {
+                    vocabBuf[i] = CChar(fgetc(file))
+                    if feof(file) > 0 || (vocabBuf[i] == CONST_SPACE) {
                         break
                     }
-                    if (a < MAX_VOCAB_LEN) && (vocab[b * MAX_VOCAB_LEN + a] != CONST_NEWLINE) {
-                        a += 1
+                    if (i < MAX_VOCAB_LEN) && (vocabBuf[i] != CONST_NEWLINE) {
+                        i += 1
                     }
                 }
-                vocab[b * MAX_VOCAB_LEN + a] = 0
+                vocabBuf[i] = 0 // null terminated
+                vocab.append(String(utf8String: vocabBuf)!)
+                
                 for a in 0..<modelSize {
                     fread(&M[a + b * modelSize], MemoryLayout<Float>.size, 1, file)
                 }
@@ -64,18 +77,10 @@ public final class Distance {
                 }
             }
         }
-        
-        fclose(file)
-        
-        
-        self.vocabCount = vocabCount
         self.vocab = vocab
-        self.MCount = MCount
-        self.M = M
     }
     
     deinit {
-        vocab.deallocate(capacity: vocabCount)
         M.deallocate(capacity: MCount)
     }
     
@@ -151,7 +156,7 @@ public final class Distance {
         for a in 0..<cn {
             for bb in 0..<modelWords {
                 b = bb
-                if strcmp(&vocab[bb * MAX_VOCAB_LEN], st[a]) == 0 {
+                if vocab[bb] == String(utf8String: st[a])! {
                     break
                 }                
             }
@@ -221,7 +226,8 @@ public final class Distance {
                         d -= 1
                     }
                     bestd[a] = dist
-                    strcpy(bestw[a], &vocab[c * MAX_VOCAB_LEN]);
+                    let cstr = vocab[c].cString(using: .utf8)!
+                    strcpy(bestw[a], cstr);
                     break;
                 }
             }
