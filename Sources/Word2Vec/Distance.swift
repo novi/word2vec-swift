@@ -15,9 +15,13 @@ fileprivate let MAX_STRING_LEN = 2000 // max_size
 fileprivate let CONST_SPACE = CChar(" ".utf8CString[0])
 fileprivate let CONST_NEWLINE = CChar("\n".utf8CString[0])
 
+typealias ModelIndex = Int
+
 public final class Distance {
+
     
-    private let vocab: [String] // count will be `modelWords`
+    private let vocab: [String]
+    private let vocabIndex: [String: ModelIndex] // count will be `modelWords`
     private let M: UnsafeMutablePointer<Float> // the model
     private let MCount: Int
     private let modelWords: Int
@@ -39,6 +43,7 @@ public final class Distance {
         // row=word length=MAX_VOCAB_LEN
         // column length=modelWords
         //let vocab = UnsafeMutablePointer<CChar>.allocate(capacity: vocabCount)
+        var vocabIndex = [:] as [String: Int]
         var vocab = [] as [String]
         
         MCount = modelWords * modelSize
@@ -48,7 +53,7 @@ public final class Distance {
             defer {
                 vocabBuf.deallocate(capacity: MAX_VOCAB_LEN)
             }
-            for b in 0..<modelWords { // b is column
+            for b in 0..<ModelIndex(modelWords) { // b is column
                 
                 // parse string from the binary
                 var i = 0
@@ -62,7 +67,9 @@ public final class Distance {
                     }
                 }
                 vocabBuf[i] = 0 // null terminated
-                vocab.append(String(utf8String: vocabBuf)!)
+                let str = String(utf8String: vocabBuf)!
+                vocabIndex[str] = b
+                vocab.append(str)
                 
                 for a in 0..<modelSize {
                     fread(&M[a + b * modelSize], MemoryLayout<Float>.size, 1, file)
@@ -78,6 +85,7 @@ public final class Distance {
             }
         }
         self.vocab = vocab
+        self.vocabIndex = vocabIndex
     }
     
     deinit {
@@ -87,30 +95,18 @@ public final class Distance {
     func calcDistance(words: [String], limit: Int) {
         let countToShow = limit
         
-        var b = 0
+        // 1. find model index of the words
         var bi = [Int](repeating: 0, count: words.count) // bi is vocab index for each words
-        for a in 0..<words.count {
-            for bb in 0..<modelWords {
-                b = bb
-                if vocab[bb] == words[a] {
-                    break
-                }                
-            }
-            if b == modelWords {
-                b = -1
-            }
-            bi[a] = b
-            let str = String(format: "Word: %@  Position in vocabulary: %lld", words[a], bi[a])
-            print(str)
-            if b == -1 {
-                print("Out of dictionary word!")
-                break
+        for (i, word) in words.enumerated() {
+            if let posIndex = vocabIndex[word] {
+                bi[i] = posIndex
+                let str = String(format: "Word: %@  Position in vocabulary: %lld", word, posIndex)
+                print(str)
+            } else {
+                fatalError("Out of dictionary word!")
             }
         }
         
-        if (b == -1) {
-            return
-        }
         print("\n                                              Word       Cosine distance\n------------------------------------------------------------------------")
         
         var vec = [Float](repeating: 0, count: modelSize)
