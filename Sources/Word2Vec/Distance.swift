@@ -88,9 +88,8 @@ public final class Distance {
         let countToShow = limit
         
         var b = 0
-        let cn = words.count
-        var bi = [Int](repeating: 0, count: 100) // bi is vocab index for each words
-        for a in 0..<cn {
+        var bi = [Int](repeating: 0, count: words.count) // bi is vocab index for each words
+        for a in 0..<words.count {
             for bb in 0..<modelWords {
                 b = bb
                 if vocab[bb] == words[a] {
@@ -113,8 +112,9 @@ public final class Distance {
             return
         }
         print("\n                                              Word       Cosine distance\n------------------------------------------------------------------------")
-        var vec = [Float].init(repeating: 0, count: MAX_STRING_LEN)
-        for b in 0..<cn {
+        
+        var vec = [Float](repeating: 0, count: modelSize)
+        for b in 0..<words.count {
             if bi[b] == -1 {
                 continue
             }
@@ -130,16 +130,13 @@ public final class Distance {
         for a in 0..<modelSize {
             vec[a] /= len
         }
-        /*for a in 0..<countToShow {
-            bestd[a] = -1
-        }*/
         
-        var bestd = [Float].init(repeating: -1, count: countToShow)
+        var bestd = [Float](repeating: -1, count: countToShow)
         var bestw = [String](repeating: "", count: countToShow)
         
         for c in 0..<modelWords {
             var a = 0
-            for b in 0..<cn {
+            for b in 0..<words.count {
                 if bi[b] == c {
                     a = 1
                 }
