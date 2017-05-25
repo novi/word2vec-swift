@@ -39,14 +39,21 @@ public final class Distance {
         modelWords = Int(modelWords_)
         modelSize = Int(modelSize_)
         
-        //let vocabCount = modelWords * MAX_VOCAB_LEN
-        // row=word length=MAX_VOCAB_LEN
-        // column length=modelWords
-        //let vocab = UnsafeMutablePointer<CChar>.allocate(capacity: vocabCount)
+        
         var vocabIndex = [:] as [String: Int]
         var vocab = [] as [String]
         
         MCount = modelWords * modelSize
+        // row vocab index length=modelWords
+        // column vector length=modelSize
+        // 0,1,2,3...modelSize
+        // 1
+        // 2
+        // 3
+        // :
+        // :
+        // modelWords
+        
         M = UnsafeMutablePointer<Float>.allocate(capacity: MCount)
         do {
             let vocabBuf = UnsafeMutablePointer<CChar>.allocate(capacity: MAX_VOCAB_LEN)
@@ -92,7 +99,7 @@ public final class Distance {
         M.deallocate(capacity: MCount)
     }
     
-    func calcDistance(words: [String], limit: Int) {
+    func calcDistance(words: [String], limit: Int) -> [(String, Float)] {
         let countToShow = limit
         
         // 1. find model index of the words
@@ -103,11 +110,12 @@ public final class Distance {
                 let str = String(format: "Word: %@  Position in vocabulary: %lld", word, posIndex)
                 print(str)
             } else {
+                // TODO:
                 fatalError("Out of dictionary word!")
             }
         }
         
-        print("\n                                              Word       Cosine distance\n------------------------------------------------------------------------")
+        //print("\n                                              Word       Cosine distance\n------------------------------------------------------------------------")
         
         var vec = [Float](repeating: 0, count: modelSize)
         for b in 0..<words.count {
@@ -161,9 +169,10 @@ public final class Distance {
                 }
             }
         }
-        for a in 0..<countToShow {
+        /*for a in 0..<countToShow {
             let str = String(format: "%@\t\t%f", bestw[a], bestd[a])
             print(str)
-        }
+        }*/
+        return (0..<countToShow).map { (bestw[$0], bestd[$0]) }
     }
 }

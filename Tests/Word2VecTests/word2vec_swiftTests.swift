@@ -10,9 +10,16 @@ class word2vec_swiftTests: XCTestCase {
     
     func testLoadModel() {
         
+        // TODO: fix path
+        // trained model binary path
         let distance = Distance(modelPath: "/Users/ito/ExtProjs/Word2Vec-iOS/Word2Vec-iOS/res/out.bin")
         
-        distance.calcDistance(words: ["cat", "dog"], limit: 120)
+        let result = distance.calcDistance(words: ["cat", "dog"], limit: 120)
+        
+        print("\n                                              Word       Cosine distance\n------------------------------------------------------------------------")
+        for d in result {
+            print("\(d.0)\t\t\(d.1)")
+        }
     }
 
 
